@@ -482,6 +482,15 @@ def main():
 
     write_index_html(lessons, out_dir)
 
+    # mirror the published site into ../docs (GitHub Pages source) if present
+    docs = os.path.join(os.path.dirname(out_dir), "docs")
+    if os.path.isdir(docs):
+        import shutil
+        shutil.copy(os.path.join(out_dir, "index.html"), os.path.join(docs, "index.html"))
+        shutil.copy(os.path.join(out_dir, "forms-data.json"), os.path.join(docs, "forms-data.json"))
+        shutil.copy(os.path.join(out_dir, "question-bank.csv"), os.path.join(docs, "question-bank.csv"))
+        print("synced docs/ (GitHub Pages)")
+
     # summary
     nf = sum(len(L["forms"]) for L in lessons)
     nq = sum(len(f["items"]) for L in lessons for f in L["forms"] if f["isQuiz"])
