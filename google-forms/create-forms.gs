@@ -84,16 +84,37 @@ function resetProgress() {
 
 function buildLesson_(lesson, root, sheet) {
   var unitFolder = getOrCreateFolder_(root, "Unit " + (lesson.unit || "?"));
+  var urls = {};
   for (var f = 0; f < lesson.forms.length; f++) {
     var spec = lesson.forms[f];
     var form = buildForm_(spec);
     DriveApp.getFileById(form.getId()).moveTo(unitFolder);
+    urls[spec.key] = form.getPublishedUrl();
     sheet.appendRow([
       lesson.id, lesson.unit, lesson.lesson, lesson.standard,
       spec.key, spec.isQuiz ? "yes" : "no",
       form.getPublishedUrl(), form.getEditUrl()
     ]);
   }
+  updateIndexJson_(root, lesson.id, urls);   // power the forms-index.html page
+}
+
+/**
+ * Maintains forms-index.json in the root folder: { "<lessonId>": {notes,practice,quiz} }.
+ * Download this file and drop it next to forms-index.html to activate the links.
+ */
+function updateIndexJson_(root, lessonId, urls) {
+  var map = {};
+  var it = root.getFilesByName("forms-index.json");
+  var file = null;
+  if (it.hasNext()) {
+    file = it.next();
+    try { map = JSON.parse(file.getBlob().getDataAsString()); } catch (e) { map = {}; }
+  }
+  map[lessonId] = urls;
+  var json = JSON.stringify(map, null, 1);
+  if (file) file.setContent(json);
+  else root.createFile("forms-index.json", json, "application/json");
 }
 
 function buildForm_(spec) {

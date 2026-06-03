@@ -21,7 +21,8 @@ Auto-generates **3 Google Forms per lesson** for all **74** Grade 6 math lessons
 | `create-forms.gs` | Google Apps Script that builds all the forms in your Google Drive |
 | `forms-data.json` | The generated form content the script reads (1.3 MB) |
 | `question-bank.csv` | Flat, human-readable export of every question + answer (open in Sheets/Excel) |
-| `build.py` | Regenerates `forms-data.json` + `question-bank.csv` from the lesson configs |
+| `forms-index.html` | Neft-styled landing page linking every lesson's Notes / Practice / Quiz |
+| `build.py` | Regenerates `forms-data.json`, `question-bank.csv`, and `forms-index.html` |
 
 ---
 
@@ -51,6 +52,25 @@ The forms are organized in Drive as:
 > **Note:** `forms-data.json` is fetched from this repo's raw URL, set in the
 > `DATA_URL` variable at the top of `create-forms.gs`. If you move the file or
 > branch, update that one line.
+
+---
+
+## Landing page (`forms-index.html`)
+
+A searchable, Neft-styled page that lists all 74 lessons (grouped by unit) with
+**Notes / Practice / Quiz** buttons for each. It already has every lesson's
+title and standard baked in, so it renders immediately — the buttons just
+need URLs to point at.
+
+To activate the links:
+1. Run `createAllForms` (above). As it builds, the script writes a file named
+   **`forms-index.json`** into the `Neft Math — Google Forms` folder in your Drive.
+2. Download that `forms-index.json` and place it **next to `forms-index.html`**.
+3. Open the page (or deploy the folder to Cloudflare Pages / GitHub Pages).
+   The banner turns green and every button links straight to its live form.
+
+Until the JSON is present the buttons stay greyed out — the page is still a
+useful, printable map of the whole course.
 
 ---
 

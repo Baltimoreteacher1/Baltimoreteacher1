@@ -312,6 +312,122 @@ def build_quiz_form(cfg):
             "isQuiz": True, "items": items}
 
 
+# ---------- index page --------------------------------------------------------
+
+INDEX_TEMPLATE = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Google Forms — Index</title>
+<style>
+body{margin:0;background:#f7f4ec;color:#21313f;font-family:Calibri,"Segoe UI",system-ui,sans-serif;}
+.wrap{max-width:920px;margin:0 auto;padding:32px 20px;}
+h1{font-family:Outfit,system-ui,sans-serif;color:#12355b;margin:0 0 6px;}
+.sub{color:#5f6f80;margin:0 0 18px;}
+.banner{border-radius:12px;padding:12px 16px;margin:0 0 20px;font-size:14px;}
+.banner.warn{background:#fef0d8;border:1px solid #f2c15b;color:#7a5410;}
+.banner.ok{background:#dff2ee;border:1px solid #1fa6a2;color:#0f6f6b;}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px;}
+input[type=search]{flex:1;min-width:200px;padding:9px 12px;border:1px solid #d7e2ed;border-radius:8px;font-size:15px;}
+.unit-group{background:#fff;border:1px solid #d7e2ed;border-radius:12px;padding:16px 20px;margin:0 0 16px;}
+.unit-group h2{color:#1fa6a2;margin:0 0 10px;font-family:Outfit,system-ui,sans-serif;}
+.row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #eef3f8;flex-wrap:wrap;}
+.row:last-child{border-bottom:0;}
+.name{flex:1;min-width:220px;font-weight:600;color:#12355b;}
+.std{color:#5f6f80;font-weight:400;font-size:13px;margin-left:6px;}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;margin-left:6px;}
+.tag-core{background:#dff2ee;color:#1fa6a2;border:1px solid #1fa6a2;}
+.tag-flagship{background:#fef0d8;color:#9a6b12;border:1px solid #f2c15b;}
+.btns{display:flex;gap:6px;}
+.btn{font-size:13px;font-weight:700;border-radius:8px;padding:5px 12px;text-decoration:none;border:1px solid;white-space:nowrap;}
+.btn-notes{color:#1fa6a2;border-color:#1fa6a2;background:#f1faf8;}
+.btn-practice{color:#12355b;border-color:#9bb6d2;background:#f1f6fb;}
+.btn-quiz{color:#9a6b12;border-color:#f2c15b;background:#fef7e8;}
+.btn:hover{filter:brightness(0.96);}
+.btn.off{color:#aab4bf;border-color:#dde5ec;background:#f4f7fa;cursor:not-allowed;}
+.legend{color:#5f6f80;font-size:14px;margin:0 0 16px;}
+code{background:#eef3f8;padding:1px 5px;border-radius:4px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Google Forms</h1>
+  <p class="sub">Notes, Practice, and autograded Quiz forms for all __COUNT__ Grade 6 math lessons.</p>
+  <div id="banner" class="banner warn">
+    Buttons are inactive until you generate the forms. Run <code>create-forms.gs</code>
+    in Google Apps Script, download the <code>forms-index.json</code> it writes to your Drive,
+    and place it next to this page. The buttons will then link straight to each form.
+  </div>
+  <p class="legend"><span class="tag tag-core">Core</span> standard lesson &nbsp;
+     <span class="tag tag-flagship">Flagship</span> mission-based lesson</p>
+  <div class="controls"><input id="q" type="search" placeholder="Filter by lesson name, number, or standard…" /></div>
+  <div id="list"></div>
+</div>
+<script>
+const LESSONS = __LESSONS__;
+let URLS = {};
+function render(filter){
+  filter = (filter||"").toLowerCase();
+  const byUnit = {};
+  LESSONS.forEach(L => {
+    const hay = (L.id+" "+L.title+" "+L.standard).toLowerCase();
+    if(filter && hay.indexOf(filter)<0) return;
+    (byUnit[L.unit] = byUnit[L.unit] || []).push(L);
+  });
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  Object.keys(byUnit).map(Number).sort((a,b)=>a-b).forEach(u => {
+    const sec = document.createElement("section");
+    sec.className = "unit-group";
+    sec.innerHTML = "<h2>Unit "+u+"</h2>";
+    byUnit[u].forEach(L => {
+      const u3 = URLS[L.id] || {};
+      const btn = (key,label,cls) => u3[key]
+        ? '<a class="btn '+cls+'" target="_blank" rel="noopener" href="'+u3[key]+'">'+label+'</a>'
+        : '<span class="btn '+cls+' off" title="Run the generator to activate">'+label+'</span>';
+      const tag = L.flagship
+        ? '<span class="tag tag-flagship">Flagship</span>'
+        : '<span class="tag tag-core">Core</span>';
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = '<span class="name">'+L.id+' — '+L.title+' '+tag+
+        '<span class="std">'+L.standard+'</span></span>'+
+        '<span class="btns">'+btn("notes","Notes","btn-notes")+
+        btn("practice","Practice","btn-practice")+
+        btn("quiz","Quiz","btn-quiz")+'</span>';
+      sec.appendChild(row);
+    });
+    list.appendChild(sec);
+  });
+}
+fetch("./forms-index.json").then(r => r.ok ? r.json() : null).then(j => {
+  if(j){ URLS = j;
+    const b = document.getElementById("banner");
+    const n = Object.keys(URLS).length;
+    b.className = "banner ok";
+    b.innerHTML = "Linked to your forms — "+n+" lessons connected. Click any button to open the form.";
+  }
+  render("");
+}).catch(() => render(""));
+document.getElementById("q").addEventListener("input", e => render(e.target.value));
+</script>
+</body>
+</html>
+"""
+
+
+def write_index_html(lessons, out_dir):
+    meta = [{"id": L["id"], "unit": L["unit"], "lesson": L["lesson"],
+             "title": L["title"], "standard": L["standard"],
+             "flagship": "flagship" in L["id"]} for L in lessons]
+    html = (INDEX_TEMPLATE
+            .replace("__COUNT__", str(len(lessons)))
+            .replace("__LESSONS__", json.dumps(meta, ensure_ascii=False)))
+    with open(os.path.join(out_dir, "forms-index.html"), "w", encoding="utf-8") as f:
+        f.write(html)
+
+
 # ---------- driver ------------------------------------------------------------
 
 def main():
@@ -363,6 +479,8 @@ def main():
                                 " | ".join(choices), correct,
                                 it.get("points", 0), it.get("explanation", "").replace("\n", " ")])
 
+    write_index_html(lessons, out_dir)
+
     # summary
     nf = sum(len(L["forms"]) for L in lessons)
     nq = sum(len(f["items"]) for L in lessons for f in L["forms"] if f["isQuiz"])
@@ -371,7 +489,7 @@ def main():
     print(f"lessons: {len(lessons)}")
     print(f"forms:   {nf}  (notes + practice + quiz per lesson)")
     print(f"quiz questions: {nq}  (autograded MC: {graded})")
-    print(f"wrote: forms-data.json, question-bank.csv")
+    print(f"wrote: forms-data.json, question-bank.csv, forms-index.html")
 
 
 if __name__ == "__main__":
