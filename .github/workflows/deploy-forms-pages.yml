@@ -1,0 +1,42 @@
+name: Deploy Google Forms page to Pages
+
+# Publishes the google-forms/ folder to GitHub Pages, live at
+# https://baltimoreteacher1.github.io/baltimoreteacher1/
+# The configure-pages step enables Pages on first run (no settings access needed).
+
+on:
+  push:
+    branches: [initial-setup]
+    paths:
+      - "google-forms/**"
+      - ".github/workflows/deploy-forms-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure Pages (enable on first run)
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Upload the google-forms folder
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: google-forms
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

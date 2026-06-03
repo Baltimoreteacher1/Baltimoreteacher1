@@ -424,8 +424,9 @@ def write_index_html(lessons, out_dir):
     html = (INDEX_TEMPLATE
             .replace("__COUNT__", str(len(lessons)))
             .replace("__LESSONS__", json.dumps(meta, ensure_ascii=False)))
-    with open(os.path.join(out_dir, "forms-index.html"), "w", encoding="utf-8") as f:
-        f.write(html)
+    for name in ("forms-index.html", "index.html"):   # index.html = Pages root
+        with open(os.path.join(out_dir, name), "w", encoding="utf-8") as f:
+            f.write(html)
 
 
 # ---------- driver ------------------------------------------------------------
