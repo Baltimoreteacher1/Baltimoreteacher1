@@ -25,8 +25,9 @@
  * ===========================================================================
  */
 
-// URL of the generated data file (public raw GitHub link).
-var DATA_URL = "https://raw.githubusercontent.com/Baltimoreteacher1/baltimoreteacher1/claude/upbeat-shannon-n6fSc/google-forms/forms-data.json";
+// URL of the generated data file. Defaults to the eduwonder deployment.
+// Fallback (raw GitHub): https://raw.githubusercontent.com/Baltimoreteacher1/eduwonderlab/main/google-forms/forms-data.json
+var DATA_URL = "https://eduwonderlab.vercel.app/google-forms/forms-data.json";
 
 var ROOT_FOLDER_NAME = "Neft Math — Google Forms";
 var INDEX_SHEET_NAME = "Neft Math — Forms Index";

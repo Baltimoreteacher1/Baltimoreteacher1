@@ -55,6 +55,33 @@ The forms are organized in Drive as:
 
 ---
 
+## Deploying into eduwonder (eduwonderlab.vercel.app)
+
+The site is the **`eduwonderlab`** repo (a.k.a. `neft-teacher-pipeline`), a static
+site deployed on Vercel. `deploy-to-eduwonder.sh` puts this whole package there:
+
+```bash
+./deploy-to-eduwonder.sh
+```
+
+It clones the repo, copies the package into `<repo>/google-forms/` (and writes
+`google-forms/index.html` so **eduwonderlab.vercel.app/google-forms/** serves the
+page), adds a discoverable **Google Forms** card + top button to
+`GITHUB_DASHBOARD.html`, then commits to branch `add-google-forms` and pushes.
+Merge that branch to `main` and Vercel deploys it to production.
+
+Run against an existing local clone instead of cloning fresh:
+
+```bash
+REPO_DIR=/path/to/eduwonderlab ./deploy-to-eduwonder.sh
+```
+
+Once live, `DATA_URL` in `create-forms.gs` already points at
+`https://eduwonderlab.vercel.app/google-forms/forms-data.json`, so the form
+generator reads its content straight from eduwonder.
+
+---
+
 ## Landing page (`forms-index.html`)
 
 A searchable, Neft-styled page that lists all 74 lessons (grouped by unit) with
