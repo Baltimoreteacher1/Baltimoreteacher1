@@ -344,10 +344,29 @@ input[type=search]{flex:1;min-width:200px;padding:9px 12px;border:1px solid #d7e
 .btn-notes{color:#1fa6a2;border-color:#1fa6a2;background:#f1faf8;}
 .btn-practice{color:#12355b;border-color:#9bb6d2;background:#f1f6fb;}
 .btn-quiz{color:#9a6b12;border-color:#f2c15b;background:#fef7e8;}
+.btn{cursor:pointer;font-family:inherit;}
 .btn:hover{filter:brightness(0.96);}
-.btn.off{color:#aab4bf;border-color:#dde5ec;background:#f4f7fa;cursor:not-allowed;}
+.btn:focus-visible{outline:2px solid #12355b;outline-offset:2px;}
 .legend{color:#5f6f80;font-size:14px;margin:0 0 16px;}
 code{background:#eef3f8;padding:1px 5px;border-radius:4px;}
+.overlay{position:fixed;inset:0;background:rgba(18,53,91,.45);display:none;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;z-index:10;}
+.overlay.open{display:flex;}
+.sheet{background:#fff;border-radius:12px;max-width:760px;width:100%;padding:20px 24px;box-shadow:0 10px 30px rgba(0,0,0,.2);}
+.sheet-head{display:flex;gap:10px;align-items:flex-start;}
+.sheet-head h2{flex:1;margin:0;color:#12355b;font-family:Outfit,system-ui,sans-serif;font-size:22px;}
+.sheet-tools{display:flex;gap:6px;flex-wrap:wrap;}
+.desc{white-space:pre-wrap;color:#5f6f80;font-size:14px;margin:10px 0 14px;}
+.sec{color:#1fa6a2;font-family:Outfit,system-ui,sans-serif;margin:18px 0 4px;font-size:18px;}
+.q{border-top:1px solid #eef3f8;padding:10px 0;}
+.q-title{font-weight:600;white-space:pre-wrap;}
+.q-help{white-space:pre-wrap;color:#5f6f80;font-size:13px;margin-top:4px;}
+.q ol{margin:6px 0 0;padding-left:22px;list-style:upper-alpha;}
+.show-key .q li.correct{color:#0f6f6b;font-weight:700;}
+.show-key .q li.correct::after{content:"  ✓";}
+.q-exp{display:none;color:#0f6f6b;font-size:13px;margin-top:4px;}
+.show-key .q-exp{display:block;}
+.line{border-bottom:1px solid #c9d6e2;height:22px;}
+@media print{body>.wrap{display:none;}.overlay{position:static;background:none;padding:0;display:block;}.sheet{box-shadow:none;}.sheet-tools{display:none;}}
 </style>
 </head>
 <body>
@@ -355,18 +374,103 @@ code{background:#eef3f8;padding:1px 5px;border-radius:4px;}
   <h1>Google Forms</h1>
   <p class="sub">Notes, Practice, and autograded Quiz forms for all __COUNT__ Grade 6 math lessons.</p>
   <div id="banner" class="banner warn">
-    Buttons are inactive until you generate the forms. Run <code>create-forms.gs</code>
-    in Google Apps Script, download the <code>forms-index.json</code> it writes to your Drive,
-    and place it next to this page. The buttons will then link straight to each form.
+    Click any button to preview (and print) that form's questions. To link the buttons to
+    live Google Forms instead, run <code>create-forms.gs</code> in Google Apps Script, download
+    the <code>forms-index.json</code> it writes to your Drive, and place it next to this page.
   </div>
   <p class="legend"><span class="tag tag-core">Core</span> standard lesson &nbsp;
      <span class="tag tag-flagship">Flagship</span> mission-based lesson</p>
   <div class="controls"><input id="q" type="search" placeholder="Filter by lesson name, number, or standard…" /></div>
   <div id="list"></div>
 </div>
+<div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+  <div class="sheet" id="sheet">
+    <div class="sheet-head">
+      <h2 id="sheet-title"></h2>
+      <div class="sheet-tools">
+        <button type="button" class="btn btn-quiz" id="key-toggle" hidden>Show answers</button>
+        <button type="button" class="btn btn-practice" onclick="window.print()">Print</button>
+        <button type="button" class="btn btn-notes" id="close" aria-label="Close preview">Close</button>
+      </div>
+    </div>
+    <div id="sheet-body"></div>
+  </div>
+</div>
 <script>
 const LESSONS = __LESSONS__;
 let URLS = {};
+let DATA = null;   // forms-data.json, loaded on first preview click
+function loadData(){
+  if(!DATA) DATA = fetch("./forms-data.json").then(r => { if(!r.ok) throw r.status; return r.json(); });
+  return DATA;
+}
+function el(tag, cls, text){
+  const e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(text) e.textContent = text;
+  return e;
+}
+const overlay = document.getElementById("overlay");
+const body = document.getElementById("sheet-body");
+const keyBtn = document.getElementById("key-toggle");
+let lastFocus = null;
+function openPreview(id, key){
+  lastFocus = document.activeElement;
+  document.getElementById("sheet-title").textContent = "Loading…";
+  body.innerHTML = "";
+  keyBtn.hidden = true;
+  body.classList.remove("show-key");
+  keyBtn.textContent = "Show answers";
+  overlay.classList.add("open");
+  document.getElementById("close").focus();
+  loadData().then(d => {
+    const L = d.lessons.find(x => x.id === id);
+    const f = L && L.forms.find(x => x.key === key);
+    if(!f) throw "missing";
+    document.getElementById("sheet-title").textContent = f.title;
+    if(f.description) body.appendChild(el("div", "desc", f.description));
+    keyBtn.hidden = !f.isQuiz;
+    let n = 0;
+    f.items.forEach(it => {
+      if(it.kind === "section"){
+        body.appendChild(el("h3", "sec", it.title));
+        if(it.description) body.appendChild(el("div", "desc", it.description));
+        return;
+      }
+      const q = el("div", "q");
+      q.appendChild(el("div", "q-title", (++n)+". "+it.title));
+      if(it.help) q.appendChild(el("div", "q-help", it.help));
+      if(it.kind === "mc"){
+        const ol = el("ol");
+        (it.choices||[]).forEach((c,i) => ol.appendChild(el("li", i === it.correctIndex ? "correct" : "", c)));
+        q.appendChild(ol);
+        if(it.explanation) q.appendChild(el("div", "q-exp", it.explanation));
+      } else {
+        const lines = it.kind === "paragraph" ? 3 : 1;
+        for(let i=0;i<lines;i++) q.appendChild(el("div", "line"));
+      }
+      body.appendChild(q);
+    });
+  }).catch(() => {
+    document.getElementById("sheet-title").textContent = "Couldn't load this form";
+    body.appendChild(el("div", "desc", "forms-data.json was not found next to this page. Make sure it is deployed in the same folder."));
+  });
+}
+function closePreview(){
+  overlay.classList.remove("open");
+  if(lastFocus) lastFocus.focus();
+}
+document.getElementById("close").addEventListener("click", closePreview);
+overlay.addEventListener("click", e => { if(e.target === overlay) closePreview(); });
+document.addEventListener("keydown", e => { if(e.key === "Escape" && overlay.classList.contains("open")) closePreview(); });
+keyBtn.addEventListener("click", () => {
+  const on = body.classList.toggle("show-key");
+  keyBtn.textContent = on ? "Hide answers" : "Show answers";
+});
+document.getElementById("list").addEventListener("click", e => {
+  const b = e.target.closest("button[data-id]");
+  if(b) openPreview(b.dataset.id, b.dataset.key);
+});
 function render(filter){
   filter = (filter||"").toLowerCase();
   const byUnit = {};
@@ -385,7 +489,8 @@ function render(filter){
       const u3 = URLS[L.id] || {};
       const btn = (key,label,cls) => u3[key]
         ? '<a class="btn '+cls+'" target="_blank" rel="noopener" href="'+u3[key]+'">'+label+'</a>'
-        : '<span class="btn '+cls+' off" title="Run the generator to activate">'+label+'</span>';
+        : '<button type="button" class="btn '+cls+'" data-id="'+L.id+'" data-key="'+key+'" '+
+          'aria-label="Preview '+label+' for lesson '+L.id+'">'+label+'</button>';
       const tag = L.flagship
         ? '<span class="tag tag-flagship">Flagship</span>'
         : '<span class="tag tag-core">Core</span>';
